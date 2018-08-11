@@ -1,0 +1,14 @@
+(library
+  (public_name hpack)
+  (libraries lwt lwt.unix)
+  (preprocess (pps ppx_let)))
+
+(rule
+  (targets huffman_table.ml)
+  (deps ../util/huffman_table.txt)
+  (action (run ../util/gen_huffman.exe %{deps} %{targets})))
+
+(rule
+  (targets static_table.ml)
+  (deps ../util/static_table.txt)
+  (action (run ../util/gen_static.exe %{deps} %{targets})))

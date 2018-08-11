@@ -1,0 +1,57 @@
+open Huffman_table
+
+exception Compression_error = S.Compression_error
+
+let char_of_int = Char.unsafe_chr
+
+let encoded_length s =
+  let rec loop bits i =
+    if i < String.length s then
+      loop (bits + snd encode_table.(int_of_char s.[i])) (i + 1)
+    else (bits + 7) / 8 in
+  loop 0 0
+
+let encode s =
+  let buffer = Buffer.create (String.length s) in
+  let bits = ref 0 and bits_left = ref 40 in
+  for i = 0 to String.length s - 1 do
+    let (code, length) = encode_table.(int_of_char s.[i]) in
+    bits_left := !bits_left - length;
+    bits := !bits lor (code lsl !bits_left);
+    while !bits_left <= 32 do
+      Buffer.add_char buffer (char_of_int (!bits lsr 32));
+      bits := (!bits lsl 8) land 0xffffffffff;
+      bits_left := !bits_left + 8;
+    done
+  done;
+  if !bits_left < 40 then begin
+    bits := !bits lor (1 lsl !bits_left - 1);
+    Buffer.add_char buffer (char_of_int (!bits lsr 32));
+  end;
+  Buffer.contents buffer
+
+let add_output buffer = function
+  | Some c -> Buffer.add_char buffer c
+  | None -> ()
+
+let get_id = function
+  | Some id -> id
+  | None -> raise Compression_error
+
+let decode s =
+  let buffer = Buffer.create (String.length s) in
+  let rec loop id accept i =
+    if i < String.length s then
+      let input = int_of_char s.[i] in
+      let index = (id lsl 4) + (input lsr 4) in
+      let (state, _, output) = decode_table.(index) in
+      add_output buffer output;
+      let id = get_id state in
+      let index = (id lsl 4) + (input land 0x0f) in
+      let (state, accept, output) = decode_table.(index) in
+      add_output buffer output;
+      let id = get_id state in
+      loop id accept (i + 1)
+    else if not accept then raise Compression_error in
+  loop 0 true 0;
+  Buffer.contents buffer

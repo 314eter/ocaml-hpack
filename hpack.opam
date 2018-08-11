@@ -1,0 +1,21 @@
+opam-version: "1.2"
+maintainer: "Pieter Goetschalckx <3.14.e.ter@gmail.com>"
+authors: ["Pieter Goetschalckx <3.14.e.ter@gmail.com>"]
+homepage: "https://github.com/314eter/ocaml-hpack"
+license: "MIT"
+dev-repo: "https://github.com/314eter/ocaml-hpack.git"
+bug-reports: "https://github.com/314eter/ocaml-hpack/issues"
+available: [ ocaml-version >= "4.07.0"]
+depends: [
+  "dune" {build}
+  "yojson" {test}
+  "hex" {test}
+  "lwt_ppx" {test}
+  "lwt"
+  "ppx_let"
+]
+build: [
+  ["dune" "subst" "-n" name] {pinned}
+  ["dune" "build" "-p" name "-j" jobs]
+]
+build-test: [["dune" "runtest" "-p" name "-j" jobs]]

@@ -15,7 +15,7 @@ depends: [
   "ppx_let"
 ]
 build: [
-  ["dune" "subst" "-n" name] {pinned}
   ["dune" "build" "-p" name "-j" jobs]
 ]
 build-test: [["dune" "runtest" "-p" name "-j" jobs]]
+

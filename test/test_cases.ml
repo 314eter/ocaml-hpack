@@ -34,7 +34,7 @@ let encode cases =
   let encoder = Encoder.create 4096 in
   Lwt_list.mapi_s begin fun seq (_, _, headers) ->
     let (ic, oc) = Lwt_io.pipe () in
-    Encoder_lwt.encode_headers encoder oc headers;%lwt
+    Hpack_lwt.Encoder.encode_headers encoder oc headers;%lwt
     Lwt_io.close oc;%lwt
     let%lwt s = Lwt_io.read ic in
     Lwt_io.close ic;%lwt
@@ -77,7 +77,7 @@ let decode cases =
   Lwt_list.iter_s begin fun (size, s, headers) ->
     Decoder.set_capacity decoder size;
     Lwt_io.write oc s;%lwt
-    let%lwt headers' = Decoder_lwt.decode_headers decoder ic (String.length s) in
+    let%lwt headers' = Hpack_lwt.Decoder.decode_headers decoder ic (String.length s) in
     if not (headers_equal headers headers') then begin
       Lwt_list.iter_s begin fun {name; value; _} ->
         Lwt_io.eprintlf "%s\t%s" name value

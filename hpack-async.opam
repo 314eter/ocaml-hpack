@@ -8,9 +8,9 @@ bug-reports: "https://github.com/314eter/ocaml-hpack/issues"
 available: [ ocaml-version >= "4.07.0"]
 depends: [
   "dune" {build}
-  "yojson" {test}
-  "hex" {test}
-  "ppx_let"
+  "hpack"
+  "async_kernel"
+  "async_unix"
 ]
 build: [
   ["dune" "build" "-p" name "-j" jobs]

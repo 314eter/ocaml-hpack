@@ -127,20 +127,16 @@ let encode ({lookup_table; next_seq; _} as encoder) {name; value; never_index} =
       end
 
 module Make (IO : IO) = struct
-  module Let_syntax = struct
-    let bind x ~f = IO.bind x f
-  end
-
   let encode_int oc prefix prefix_length i =
     let max_prefix = 1 lsl prefix_length - 1 in
     if i < max_prefix then
       IO.write_byte oc (prefix lor i)
     else
       let i = i - max_prefix in
-      let%bind () = IO.write_byte oc (prefix lor max_prefix) in
+      let%lwt () = IO.write_byte oc (prefix lor max_prefix) in
       let rec loop i =
         if i >= 128 then begin
-          let%bind () = IO.write_byte oc ((i land 127) lor 128) in
+          let%lwt () = IO.write_byte oc ((i land 127) lor 128) in
           loop (i lsr 7)
         end else IO.write_byte oc i in
       loop i
@@ -149,20 +145,20 @@ module Make (IO : IO) = struct
     let (prefix, s) =
       if Huffman.encoded_length s >= String.length s then (0, s)
       else (128, Huffman.encode s) in
-    let%bind () = encode_int oc prefix 7 (String.length s) in
+    let%lwt () = encode_int oc prefix 7 (String.length s) in
     IO.write_string oc s
 
   let encode_header oc prefix prefix_length index name value =
-    let%bind () = encode_int oc prefix prefix_length index in
+    let%lwt () = encode_int oc prefix prefix_length index in
     if index = 0 then
-      let%bind () = encode_string oc name in
+      let%lwt () = encode_string oc name in
       encode_string oc value
     else encode_string oc value
 
   let rec encode_headers encoder oc = function
-    | [] -> IO.return ()
+    | [] -> Lwt.return_unit
     | {name; value; _} as header :: headers ->
-      let%bind () =
+      let%lwt () =
         match encode encoder header with
         | Never_index index -> encode_header oc 16 4 index name value
         | No_index index -> encode_header oc 0 4 index name value

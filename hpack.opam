@@ -10,7 +10,8 @@ depends: [
   "dune" {build}
   "yojson" {test}
   "hex" {test}
-  "ppx_let"
+  "lwt"
+  "lwt_ppx"
 ]
 build: [
   ["dune" "build" "-p" name "-j" jobs]

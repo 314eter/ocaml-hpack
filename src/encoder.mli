@@ -8,7 +8,7 @@ val create : int -> t
     bytes. *)
 
 module Make (IO : IO) : sig
-  val encode_headers : t -> IO.oc -> header list -> unit IO.t
+  val encode_headers : t -> IO.oc -> header list -> unit Lwt.t
   (** [encode_headers decoder oc headers] writes an encoded list of headers to
       the output channel [oc] *)
 end

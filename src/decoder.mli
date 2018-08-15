@@ -11,7 +11,7 @@ val set_capacity : t -> int -> unit
 (** [set_capacity decoder capacity] sets the capacity of the dynamic table. *)
 
 module Make (IO : IO) : sig
-  val decode_headers : t -> IO.ic -> int -> header list IO.t
+  val decode_headers : t -> IO.ic -> header list Lwt.t
   (** [decode_headers decoder ic length] reads [length] bytes from the input
       channel [ic] and decodes to a list of headers. *)
 end

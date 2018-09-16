@@ -148,21 +148,17 @@ module Make (IO : IO) = struct
     let%lwt () = encode_int oc prefix 7 (String.length s) in
     IO.write_string oc s
 
-  let encode_header oc prefix prefix_length index name value =
+  let _encode_header oc prefix prefix_length index name value =
     let%lwt () = encode_int oc prefix prefix_length index in
     if index = 0 then
       let%lwt () = encode_string oc name in
       encode_string oc value
     else encode_string oc value
 
-  let rec encode_headers encoder oc = function
-    | [] -> Lwt.return_unit
-    | {name; value; _} as header :: headers ->
-      let%lwt () =
-        match encode encoder header with
-        | Never_index index -> encode_header oc 16 4 index name value
-        | No_index index -> encode_header oc 0 4 index name value
-        | Do_index index -> encode_header oc 64 6 index name value
-        | Index index -> encode_int oc 128 7 index in
-      encode_headers encoder oc headers
+  let encode_header encoder oc ({name; value; _} as header) =
+    match encode encoder header with
+    | Never_index index -> _encode_header oc 16 4 index name value
+    | No_index index -> _encode_header oc 0 4 index name value
+    | Do_index index -> _encode_header oc 64 6 index name value
+    | Index index -> encode_int oc 128 7 index
 end

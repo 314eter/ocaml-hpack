@@ -1,25 +1,30 @@
 open Hpack
+open Hpack_lwt
 
 module IO = struct
+  type 'a t = 'a Lwt.t
   type ic = Lwt_io.input_channel
   type oc = Lwt_io.output_channel
 
   let read_byte ic =
-    Lwt.map int_of_char (Lwt_io.read_char ic)
+    match%lwt Lwt_io.read_char ic with
+    | c -> Lwt.return_some (int_of_char c)
+    | exception End_of_file -> Lwt.return_none
 
   let write_byte oc b =
     Lwt_io.write_char oc (char_of_int b)
 
   let read_string ic length =
     let buffer = Bytes.create length in
-    Lwt_io.read_into_exactly ic buffer 0 length ;%lwt
-    Lwt.return (Bytes.unsafe_to_string buffer)
+    match%lwt Lwt_io.read_into_exactly ic buffer 0 length with
+    | () -> Lwt.return_some (Bytes.unsafe_to_string buffer)
+    | exception End_of_file -> Lwt.return_none
 
   let write_string = Lwt_io.write
 end
 
-module Encoder = Hpack.Encoder.Make (IO)
-module Decoder = Hpack.Decoder.Make (IO)
+module Encoder = Make_encoder (IO)
+module Decoder = Make_decoder (IO)
 
 let parse_file file =
   match Yojson.Safe.from_file file with
@@ -94,12 +99,16 @@ let decode cases =
     Lwt_io.write oc s ;%lwt
     Lwt_io.close oc ;%lwt
     let headers' = ref headers in
-    Decoder.decode_headers decoder ic begin fun header ->
-      if not (header_equal header (List.hd !headers')) then
-        Lwt.fail_with (Hex.of_string s |> Hex.show)
-      else Lwt.return (headers' := List.tl !headers')
-    end ;%lwt
-    Lwt_io.close ic
+    let%lwt error =
+      Decoder.decode_headers decoder ic begin fun header ->
+        if not (header_equal header (List.hd !headers')) then
+          Lwt.fail_with (Hex.of_string s |> Hex.show)
+        else Lwt.return (headers' := List.tl !headers')
+      end in
+    Lwt_io.close ic ;%lwt
+    match error with
+    | Ok () -> Lwt.return_unit
+    | Error e -> Lwt.fail e
   end cases
 
 let decode_file dir file =

@@ -1,7 +1,19 @@
 (library
   (public_name hpack)
-  (libraries lwt)
-  (preprocess (pps lwt_ppx)))
+  (modules s dynamic_table huffman_table static_table huffman decoder encoder hpack)
+  (preprocess (pps ppx_let)))
+
+(library
+  (name hpack_lwt)
+  (public_name hpack-lwt)
+  (modules hpack_lwt)
+  (libraries hpack lwt lwt.unix))
+
+(library
+  (name hpack_async)
+  (public_name hpack-async)
+  (modules hpack_async)
+  (libraries hpack async_kernel async_unix))
 
 (rule
   (targets huffman_table.ml)

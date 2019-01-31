@@ -1,5 +1,7 @@
 open S
 
+module F = Faraday
+
 module TokenSet = Set.Make (struct
     type t = int
     let compare (x : int) (y : int) = compare x y
@@ -126,43 +128,37 @@ let encode ({lookup_table; next_seq; _} as encoder) {name; value; never_index} =
         Do_index 0
       end
 
-module Make (C : C) (IO : IO with type 'a t = 'a C.t) = struct
-  module Let_syntax = struct
-    let bind x ~f = C.bind x f
-  end
+let encode_int t prefix prefix_length i =
+  let max_prefix = 1 lsl prefix_length - 1 in
+  if i < max_prefix then
+    F.write_uint8 t (prefix lor i)
+  else
+    let i = i - max_prefix in
+    F.write_uint8 t (prefix lor max_prefix);
+    let rec loop i =
+      if i >= 128 then begin
+        F.write_uint8 t ((i land 127) lor 128);
+        loop (i lsr 7)
+      end else F.write_uint8 t i in
+    loop i
 
-  let encode_int oc prefix prefix_length i =
-    let max_prefix = 1 lsl prefix_length - 1 in
-    if i < max_prefix then
-      IO.write_byte oc (prefix lor i)
-    else
-      let i = i - max_prefix in
-      let%bind () = IO.write_byte oc (prefix lor max_prefix) in
-      let rec loop i =
-        if i >= 128 then begin
-          let%bind () = IO.write_byte oc ((i land 127) lor 128) in
-          loop (i lsr 7)
-        end else IO.write_byte oc i in
-      loop i
+let encode_string t s =
+  let (prefix, s) =
+    if Huffman.encoded_length s >= String.length s then (0, s)
+    else (128, Huffman.encode s) in
+  encode_int t prefix 7 (String.length s);
+  F.write_string t s
 
-  let encode_string oc s =
-    let (prefix, s) =
-      if Huffman.encoded_length s >= String.length s then (0, s)
-      else (128, Huffman.encode s) in
-    let%bind () = encode_int oc prefix 7 (String.length s) in
-    IO.write_string oc s
+let _encode_header t prefix prefix_length index name value =
+  encode_int t prefix prefix_length index;
+  if index = 0 then begin
+    encode_string t name;
+    encode_string t value
+  end else encode_string t value
 
-  let _encode_header oc prefix prefix_length index name value =
-    let%bind () = encode_int oc prefix prefix_length index in
-    if index = 0 then
-      let%bind () = encode_string oc name in
-      encode_string oc value
-    else encode_string oc value
-
-  let encode_header encoder oc ({name; value; _} as header) =
-    match encode encoder header with
-    | Never_index index -> _encode_header oc 16 4 index name value
-    | No_index index -> _encode_header oc 0 4 index name value
-    | Do_index index -> _encode_header oc 64 6 index name value
-    | Index index -> encode_int oc 128 7 index
-end
+let encode_header encoder t ({name; value; _} as header) =
+  match encode encoder header with
+  | Never_index index -> _encode_header t 16 4 index name value
+  | No_index index -> _encode_header t 0 4 index name value
+  | Do_index index -> _encode_header t 64 6 index name value
+  | Index index -> encode_int t 128 7 index

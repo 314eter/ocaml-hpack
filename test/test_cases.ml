@@ -1,30 +1,4 @@
 open Hpack
-open Hpack_lwt
-
-module IO = struct
-  type 'a t = 'a Lwt.t
-  type ic = Lwt_io.input_channel
-  type oc = Lwt_io.output_channel
-
-  let read_byte ic =
-    match%lwt Lwt_io.read_char ic with
-    | c -> Lwt.return_some (int_of_char c)
-    | exception End_of_file -> Lwt.return_none
-
-  let write_byte oc b =
-    Lwt_io.write_char oc (char_of_int b)
-
-  let read_string ic length =
-    let buffer = Bytes.create length in
-    match%lwt Lwt_io.read_into_exactly ic buffer 0 length with
-    | () -> Lwt.return_some (Bytes.unsafe_to_string buffer)
-    | exception End_of_file -> Lwt.return_none
-
-  let write_string = Lwt_io.write
-end
-
-module Encoder = Make_encoder (IO)
-module Decoder = Make_decoder (IO)
 
 let parse_file file =
   match Yojson.Safe.from_file file with
@@ -57,19 +31,17 @@ let parse_file file =
   | _ -> assert false
 
 let encode cases =
-  let encoder = Hpack.Encoder.create 4096 in
-  Lwt_list.mapi_s begin fun seq (_, _, headers) ->
-    let (ic, oc) = Lwt_io.pipe () in
-    Lwt_list.iter_s (Encoder.encode_header encoder oc) headers ;%lwt
-    Lwt_io.close oc ;%lwt
-    let%lwt s = Lwt_io.read ic in
-    Lwt_io.close ic ;%lwt
-    Lwt.return (seq, Hex.of_string s |> Hex.show, headers)
+  let encoder = Encoder.create 4096 in
+  List.mapi begin fun seq (_, _, headers) ->
+    let t = Faraday.create 0x1000 in
+    List.iter (Encoder.encode_header encoder t) headers;
+    let s = Faraday.serialize_to_string t in
+    (seq, Hex.of_string s |> Hex.show, headers)
   end cases
 
 let encode_file file =
   let cases = parse_file ("raw-data/" ^ file) in
-  let%lwt result = encode cases in
+  let result = encode cases in
   let json =
     Yojson.pretty_to_string @@ `Assoc [
       "description", `String "Encoded by ocaml-hpack";
@@ -85,30 +57,21 @@ let encode_file file =
         ]
       )
     ] in
-  Lwt_io.with_file ~mode:Lwt_io.output ("ocaml-hpack/" ^ file) @@ fun oc ->
-  Lwt_io.write oc json
+  let oc = open_out ("ocaml-hpack/" ^ file) in
+  output_string oc json;
+  close_out oc
 
-let header_equal {name; value; _} {name = name'; value = value'; _} =
+let header_equal ({name; value; _}, {name = name'; value = value'; _}) =
   name = name' && value = value'
 
 let decode cases =
-  let decoder = Hpack.Decoder.create 65536 in
-  Lwt_list.iter_s begin fun (size, s, headers) ->
-    Hpack.Decoder.set_capacity decoder size;
-    let (ic, oc) = Lwt_io.pipe () in
-    Lwt_io.write oc s ;%lwt
-    Lwt_io.close oc ;%lwt
-    let headers' = ref headers in
-    let%lwt error =
-      Decoder.decode_headers decoder ic begin fun header ->
-        if not (header_equal header (List.hd !headers')) then
-          Lwt.fail_with (Hex.of_string s |> Hex.show)
-        else Lwt.return (headers' := List.tl !headers')
-      end in
-    Lwt_io.close ic ;%lwt
-    match error with
-    | Ok () -> Lwt.return_unit
-    | Error e -> Lwt.fail e
+  let decoder = Decoder.create 65536 in
+  List.iter begin fun (size, s, headers) ->
+    Decoder.set_capacity decoder size;
+    match Angstrom.parse_string (Decoder.headers decoder) s with
+    | Ok headers' when (List.combine headers headers' |> List.for_all header_equal) -> ()
+    | Ok _ -> failwith (Hex.of_string s |> Hex.show)
+    | Error error -> failwith error
   end cases
 
 let decode_file dir file =
@@ -116,16 +79,16 @@ let decode_file dir file =
   decode cases
 
 let encode_files () =
-  Lwt_io.eprintlf "Encode ocaml-hpack" ;%lwt
+  prerr_endline "Encode ocaml-hpack";
   let files = Array.to_list (Sys.readdir "raw-data") in
-  Lwt_list.iter_s encode_file files
+  List.iter encode_file files
 
 let decode_files () =
-  Lwt_list.iter_s begin fun dir ->
-    Lwt_io.eprintlf "Decode %s" dir ;%lwt
+  List.iter begin fun dir ->
+    Printf.eprintf "Decode %s\n" dir;
     Sys.readdir dir
     |> Array.to_list
-    |> Lwt_list.iter_s (decode_file dir)
+    |> List.iter (decode_file dir)
   end [
     "ocaml-hpack";
     "go-hpack";
@@ -146,7 +109,5 @@ let () =
   Sys.chdir Sys.argv.(1);
   begin try Unix.mkdir "ocaml-hpack" 0o755
   with Unix.Unix_error (Unix.EEXIST, _, _) -> () end;
-  Lwt_main.run begin
-    encode_files () ;%lwt
-    decode_files ()
-  end
+  encode_files ();
+  decode_files ()

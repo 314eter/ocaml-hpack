@@ -2,5 +2,4 @@
   (name test_cases)
   (modes exe)
   (modules test_cases)
-  (libraries hpack hpack_lwt yojson hex lwt.unix)
-  (preprocess (pps lwt_ppx)))
+  (libraries hpack yojson hex))

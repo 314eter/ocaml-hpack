@@ -7,9 +7,4 @@ val create : int -> t
     size [capacity]. This size is an approximation of the memory usage in
     bytes. *)
 
-module Make (C : C) (IO : IO with type 'a t = 'a C.t) : sig
-  val encode_header : t -> IO.oc -> header -> unit IO.t
-  (** [encode_headers decoder oc header] writes an encoded header to
-      the output channel [oc] *)
-end
-(** The encoder functorizes over an IO monad. *)
+val encode_header : t -> Faraday.t -> header -> unit

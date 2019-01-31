@@ -10,6 +10,8 @@ depends: [
   "dune" {build}
   "yojson" {test}
   "hex" {test}
+  "angstrom"
+  "faraday"
   "ppx_let"
 ]
 build: [

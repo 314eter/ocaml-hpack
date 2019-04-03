@@ -47,7 +47,7 @@ let any_string =
     | exception Compression_error -> fail "compression error"
 
 let get_indexed_field table index =
-  if index = 0 then
+  if index = 0 || index > Static_table.size + Dynamic_table.size table then
     raise Decoding_error
   else if index <= Static_table.size then
     Static_table.table.(index - 1)

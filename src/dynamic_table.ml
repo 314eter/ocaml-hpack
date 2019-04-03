@@ -23,6 +23,8 @@ let create ?(evict_callback=default_evict_callback) hpack_capacity =
     evict_callback;
   }
 
+let size {size; _} = size
+
 let get table i =
   table.entries.((table.offset + i) mod table.capacity)
 

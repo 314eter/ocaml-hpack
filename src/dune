@@ -1,6 +1,5 @@
 (library
   (public_name hpack)
-  (modules s dynamic_table huffman_table static_table huffman decoder encoder hpack)
   (libraries angstrom faraday)
   (preprocess (pps ppx_let)))
 

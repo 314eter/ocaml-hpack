@@ -3,11 +3,11 @@ type node = {
   mutable accept : bool;
   left : child;
   right : child;
-  transitions : (int option * bool * char option) array;
+  transitions : (int * bool * char option) array;
 } and child = Node of node | Symbol of char | Missing
 
 let make_node ?(left=Missing) ?(right=Missing) () =
-  { id = 0; accept = false; left; right; transitions = Array.make 16 (None, false, None) }
+  { id = 0; accept = false; left; right; transitions = Array.make 16 (-1, false, None) }
 
 let rec add_symbol tree symbol = function
   | [] -> Symbol symbol
@@ -42,8 +42,8 @@ let rec traverse root transitions failed symbol node remaining i =
     | Missing -> (true, root, None) in
   if remaining = 0 then begin
     transitions.(i) <-
-      if failed then (None, false, None)
-      else (Some node.id, node.accept, symbol);
+      if failed then (-1, false, None)
+      else (node.id, node.accept, symbol);
     i + 1
   end else
     traverse root transitions failed symbol node.left (remaining - 1) i
@@ -65,16 +65,11 @@ let output_encode_table oc encode_table =
   Printf.fprintf oc "|]\n\n"
 
 let output_transition oc (id, accept, symbol) =
-  let output_option output oc = function
-    | Some x -> Printf.fprintf oc "Some %a" output x
-    | None -> Printf.fprintf oc "None" in
-  let output_int oc = Printf.fprintf oc "%d" in
   let output_bool oc b = Printf.fprintf oc (if b then "true" else "false") in
-  let output_char oc = Printf.fprintf oc "%C" in
-  Printf.fprintf oc "(%a, %a, %a)"
-    (output_option output_int) id
-    output_bool accept
-    (output_option output_char) symbol
+  let output_symbol oc = function
+    | Some c -> Printf.fprintf oc "Some %C" c
+    | None -> Printf.fprintf oc "None" in
+  Printf.fprintf oc "(%d, %a, %a)" id output_bool accept output_symbol symbol
 
 let output_decode_table oc tree =
   Printf.fprintf oc "let decode_table = [|\n";

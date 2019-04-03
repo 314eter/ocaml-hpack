@@ -4,13 +4,13 @@ module F = Faraday
 
 module TokenSet = Set.Make (struct
     type t = int
-    let compare (x : int) (y : int) = compare x y
+    let compare : int -> int -> int = compare
   end)
 
 module LookupTable = Hashtbl.Make (struct
     type t = string
     let equal = String.equal
-    let hash (s : string) = Hashtbl.hash s
+    let hash : string -> int = Hashtbl.hash
   end)
 
 module ValueMap = Map.Make (String)

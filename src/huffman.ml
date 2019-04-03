@@ -2,8 +2,9 @@ open S
 open Huffman_table
 
 let encoded_length s =
+  let length = String.length s in
   let rec loop bits i =
-    if i < String.length s then
+    if i < length then
       loop (bits + snd encode_table.(int_of_char s.[i])) (i + 1)
     else (bits + 7) / 8 in
   loop 0 0
@@ -34,9 +35,10 @@ let get_id = function
   | None -> raise Compression_error
 
 let decode s =
-  let buffer = Buffer.create (String.length s) in
+  let length = String.length s in
+  let buffer = Buffer.create length in
   let rec loop id accept i =
-    if i < String.length s then
+    if i < length then
       let input = int_of_char s.[i] in
       let index = (id lsl 4) + (input lsr 4) in
       let (state, _, output) = decode_table.(index) in

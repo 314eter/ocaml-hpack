@@ -1,6 +1,6 @@
 module IntMap = Map.Make (struct
     type t = int
-    let compare = compare
+    let compare : int -> int -> int = compare
   end)
 
 module StringSet = Set.Make (String)

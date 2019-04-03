@@ -49,7 +49,7 @@ let increase_capacity table =
 
 let add table entry =
   let entry_size = hpack_size_entry entry in
-  while table.hpack_size + entry_size > table.hpack_capacity do
+  while table.hpack_size > 0 && table.hpack_size + entry_size > table.hpack_capacity do
     evict_one table
   done;
   if table.hpack_capacity >= table.hpack_size + entry_size then begin

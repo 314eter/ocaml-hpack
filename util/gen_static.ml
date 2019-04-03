@@ -52,20 +52,24 @@ let output_static_table oc static_table =
   Printf.fprintf oc   "|]\n\n"
 
 let output_lookup_token oc token_map =
-  Printf.fprintf oc     "let lookup_token name =\n";
-  Printf.fprintf oc     "  match String.length name with\n";
+  Printf.fprintf oc       "let lookup_token name =\n";
+  Printf.fprintf oc       "  match String.length name with\n";
   token_map |> IntMap.iter begin fun length names ->
-    let pos = find_pos names in
-    Printf.fprintf oc   "  | %d ->\n" length;
-    Printf.fprintf oc   "    begin match name.[%d] with\n" pos;
-    names |> StringSet.iter begin fun name ->
-      Printf.fprintf oc "    | %C when name = %S -> Some Token.%s\n"
-        name.[pos] name (token_of_name name);
-    end;
-    Printf.fprintf oc   "    | _ -> None\n";
-    Printf.fprintf oc   "    end\n";
+    if StringSet.cardinal names = 1 then
+      let name = StringSet.choose names in
+      Printf.fprintf oc   "  | %d when name = %S -> Some Token.%s\n" length name (token_of_name name);
+    else
+      let pos = find_pos names in
+      Printf.fprintf oc   "  | %d ->\n" length;
+      Printf.fprintf oc   "    begin match name.[%d] with\n" pos;
+      names |> StringSet.iter begin fun name ->
+        Printf.fprintf oc "    | %C when name = %S -> Some Token.%s\n"
+          name.[pos] name (token_of_name name);
+      end;
+      Printf.fprintf oc   "    | _ -> None\n";
+      Printf.fprintf oc   "    end\n";
   end;
-  Printf.fprintf oc     "  | _ -> None\n"
+  Printf.fprintf oc       "  | _ -> None\n"
 
 let () =
   let ic = open_in Sys.argv.(1) in

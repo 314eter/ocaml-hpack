@@ -3,72 +3,68 @@ module IntMap = Map.Make (struct
     let compare = compare
   end)
 
-module StringMap = Map.Make (String)
+module StringSet = Set.Make (String)
 
 module CharSet = Set.Make (Char)
 
 let token_of_name =
-  String.map @@ function
+  String.map begin function
   | 'a' .. 'z' | 'A' .. 'Z' as c -> c
   | _ -> '_'
+  end
 
 let output_tokens oc static_table =
-  Array.fold_left begin fun prev (i, name, _) ->
+  Printf.fprintf oc     "module Token = struct\n";
+  static_table |> Array.fold_left begin fun (i, prev) (name, _) ->
     if name <> prev then
-      Printf.fprintf oc "let token_%s = %d\n" (token_of_name name) i;
-    name
-  end "" static_table |> ignore;
+      Printf.fprintf oc "  let %s = %d\n" (token_of_name name) i;
+    (i + 1, name)
+  end (0, "") |> ignore;
+  Printf.fprintf oc     "end\n";
   Printf.fprintf oc "\n"
 
-let add_name name i names =
-  StringMap.update name begin function
-  | Some i' -> Some (min i i')
-  | None -> Some i
-  end names
-
 let find_pos names =
-  let n = StringMap.cardinal names in
-  let names = StringMap.to_seq names |> Seq.map fst in
+  let n = StringSet.cardinal names in
   let rec loop pos =
-      if
-        Seq.map (fun name -> name.[pos]) names
-        |> CharSet.of_seq
-        |> CharSet.cardinal
-        |> ( = ) n
-      then pos else loop (pos + 1) in
+    if
+      StringSet.to_seq names
+      |> Seq.map (fun name -> name.[pos])
+      |> CharSet.of_seq
+      |> CharSet.cardinal
+      |> ( = ) n
+    then pos else loop (pos + 1) in
   loop 0
 
-let make_token_map static_table =
-  Array.fold_left begin fun map (i, name, _) ->
+let make_token_map =
+  Array.fold_left begin fun map (name, _) ->
     let length = String.length name in
     IntMap.update length begin function
-    | Some names -> Some (add_name name i names)
-    | None -> Some (StringMap.singleton name i)
+    | Some names -> Some (StringSet.add name names)
+    | None -> Some (StringSet.singleton name)
     end map
-  end IntMap.empty static_table
-  |> IntMap.to_seq
-  |> Seq.map @@ fun (length, names) ->
-  (length, find_pos names, StringMap.to_seq names)
+  end IntMap.empty
 
 let output_static_table oc static_table =
   Printf.fprintf oc   "let table = [|\n";
-  Array.iter begin fun (i, name, value) ->
+  static_table |> Array.iteri begin fun i (name, value) ->
     Printf.fprintf oc "  (* %2d *) (%S, %S);\n" (i + 1) name value
-  end static_table;
+  end;
   Printf.fprintf oc   "|]\n\n"
 
 let output_lookup_token oc token_map =
   Printf.fprintf oc     "let lookup_token name =\n";
   Printf.fprintf oc     "  match String.length name with\n";
-  Seq.iter begin fun (length, pos, names) ->
+  token_map |> IntMap.iter begin fun length names ->
+    let pos = find_pos names in
     Printf.fprintf oc   "  | %d ->\n" length;
     Printf.fprintf oc   "    begin match name.[%d] with\n" pos;
-    Seq.iter begin fun (name, i) ->
-      Printf.fprintf oc "    | %C when name = %S -> Some %d\n" name.[pos] name i;
-    end names;
+    names |> StringSet.iter begin fun name ->
+      Printf.fprintf oc "    | %C when name = %S -> Some Token.%s\n"
+        name.[pos] name (token_of_name name);
+    end;
     Printf.fprintf oc   "    | _ -> None\n";
     Printf.fprintf oc   "    end\n";
-  end token_map;
+  end;
   Printf.fprintf oc     "  | _ -> None\n"
 
 let () =
@@ -76,8 +72,8 @@ let () =
   let static_table = Array.init 61 @@ fun i ->
       let line = input_line ic in
       match String.split_on_char '\t' line with
-      | [s; name] when int_of_string s = i + 1 -> (i, name, "")
-      | [s; name; value] when int_of_string s = i + 1 -> (i, name, value)
+      | [s; name] when int_of_string s = i + 1 -> (name, "")
+      | [s; name; value] when int_of_string s = i + 1 -> (name, value)
       | _ -> assert false in
   let token_map = make_token_map static_table in
   let oc = open_out Sys.argv.(2) in

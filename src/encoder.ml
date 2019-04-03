@@ -71,20 +71,20 @@ let seq_to_index next_seq seq =
 let is_never_index token value =
   match token with
   | Some token ->
-    token == Static_table.token_authorization ||
-    (token == Static_table.token_cookie && String.length value < 20)
+    token == Static_table.Token.authorization ||
+    (token == Static_table.Token.cookie && String.length value < 20)
   | None -> false
 
 let no_index_tokens =
-  TokenSet.of_list Static_table.[
-      token__path;
-      token_age;
-      token_content_length;
-      token_etag;
-      token_if_modified_since;
-      token_if_none_match;
-      token_location;
-      token_set_cookie;
+  TokenSet.of_list Static_table.Token.[
+      _path;
+      age;
+      content_length;
+      etag;
+      if_modified_since;
+      if_none_match;
+      location;
+      set_cookie;
     ]
 
 let is_no_index token =

@@ -18,10 +18,8 @@ let set_capacity {table; max_capacity} capacity =
 
 open Angstrom
 
-module Let_syntax = struct
-  let bind p ~f = p >>= f
-  let map p ~f = p >>| f
-end
+let ( let* ) p f = p >>= f
+let ( let+ ) p f = p >>| f
 
 let any_int prefix prefix_length =
   let max_prefix = 1 lsl prefix_length - 1 in
@@ -30,7 +28,7 @@ let any_int prefix prefix_length =
     return i
   else
     let rec loop i k =
-      let%bind b = any_uint8 in
+      let* b = any_uint8 in
       let i = i + (b land 127) lsl k in
       if b >= 128 then
         loop i (k + 7)
@@ -38,9 +36,9 @@ let any_int prefix prefix_length =
     loop i 0
 
 let any_string =
-  let%bind b = any_uint8 in
-  let%bind length = any_int b 7 in
-  let%bind s = take length in
+  let* b = any_uint8 in
+  let* length = any_int b 7 in
+  let* s = take length in
   if b < 128 then return s
   else match Huffman.decode s with
     | s -> return s
@@ -55,31 +53,31 @@ let get_indexed_field table index =
     Dynamic_table.get table (index - Static_table.size - 1)
 
 let header_field table prefix prefix_length =
-  let%bind index = any_int prefix prefix_length in
-  let%bind name =
+  let* index = any_int prefix prefix_length in
+  let* name =
     if index = 0 then any_string
     else match get_indexed_field table index with
       | name, _ -> return name
       | exception Decoding_error -> fail "decoding error" in
-  let%map value = any_string in
+  let+ value = any_string in
   (name, value)
 
 let rec header ({table; _} as decoder) =
-  let%bind b = any_uint8 in
+  let* b = any_uint8 in
   if b >= 128 then
-    let%bind index = any_int b 7 in
+    let* index = any_int b 7 in
     match get_indexed_field table index with
     | name, value -> return {name; value; never_index = false}
     | exception Decoding_error -> fail "decoding error"
   else if b >= 64 then
-    let%bind (name, value) = header_field table b 6 in
+    let* (name, value) = header_field table b 6 in
     Dynamic_table.add table (name, value);
     return {name; value; never_index = false}
   else if b < 32 then
-    let%bind (name, value) = header_field table b 4 in
+    let* (name, value) = header_field table b 4 in
     return {name; value; never_index = false}
   else
-    let%bind capacity = any_int b 5 in
+    let* capacity = any_int b 5 in
     match set_capacity decoder capacity with
     | () -> header decoder
     | exception Decoding_error -> fail "decoding error"

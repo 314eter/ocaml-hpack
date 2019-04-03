@@ -1,7 +1,7 @@
 (library
   (public_name hpack)
   (libraries angstrom faraday)
-  (preprocess (pps ppx_let)))
+  (preprocess future_syntax))
 
 (rule
   (targets huffman_table.ml)

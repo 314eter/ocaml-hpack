@@ -8,8 +8,10 @@ val create : int -> t
     bytes. *)
 
 val set_capacity : t -> int -> unit
-(** [set_capacity decoder capacity] sets the capacity of the dynamic table. *)
+(** [set_capacity decoder capacity] updates the capacity of the dynamic table. *)
 
 val header : t -> header Angstrom.t
+(** A parser for one header *)
 
 val headers : t -> header list Angstrom.t
+(** A parser for headers *)

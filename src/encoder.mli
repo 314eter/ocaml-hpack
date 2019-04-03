@@ -8,3 +8,4 @@ val create : int -> t
     bytes. *)
 
 val encode_header : t -> Faraday.t -> header -> unit
+(** [encode_header encoder t header] writes the encoding of [header] to [t] *)

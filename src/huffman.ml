@@ -1,6 +1,5 @@
+open S
 open Huffman_table
-
-exception Compression_error = S.Compression_error
 
 let encoded_length s =
   let rec loop bits i =

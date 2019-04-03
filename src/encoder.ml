@@ -143,11 +143,15 @@ let encode_int t prefix prefix_length i =
     loop i
 
 let encode_string t s =
-  let (prefix, s) =
-    if Huffman.encoded_length s >= String.length s then (0, s)
-    else (128, Huffman.encode s) in
-  encode_int t prefix 7 (String.length s);
-  F.write_string t s
+  let length = String.length s in
+  let encoded_length = Huffman.encoded_length s in
+  if encoded_length < length then begin
+    encode_int t 128 7 encoded_length;
+    Huffman.encode t s
+  end else begin
+    encode_int t 0 7 length;
+    F.write_string t s
+  end
 
 let _encode_header t prefix prefix_length index name value =
   encode_int t prefix prefix_length index;

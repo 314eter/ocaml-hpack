@@ -1,5 +1,5 @@
 val encoded_length : string -> int
 
-val encode : string -> string
+val encode : Faraday.t -> string -> unit
 
 val decode : string -> string

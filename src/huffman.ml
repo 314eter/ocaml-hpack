@@ -2,8 +2,6 @@ open Huffman_table
 
 exception Compression_error = S.Compression_error
 
-let char_of_int = Char.unsafe_chr
-
 let encoded_length s =
   let rec loop bits i =
     if i < String.length s then
@@ -11,24 +9,22 @@ let encoded_length s =
     else (bits + 7) / 8 in
   loop 0 0
 
-let encode s =
-  let buffer = Buffer.create (String.length s) in
+let encode t s =
   let bits = ref 0 and bits_left = ref 40 in
   for i = 0 to String.length s - 1 do
     let (code, length) = encode_table.(int_of_char s.[i]) in
     bits_left := !bits_left - length;
     bits := !bits lor (code lsl !bits_left);
     while !bits_left <= 32 do
-      Buffer.add_char buffer (char_of_int (!bits lsr 32));
-      bits := (!bits lsl 8) land 0xffffffffff;
+      Faraday.write_uint8 t (!bits lsr 32);
+      bits := !bits lsl 8;
       bits_left := !bits_left + 8;
     done
   done;
   if !bits_left < 40 then begin
     bits := !bits lor (1 lsl !bits_left - 1);
-    Buffer.add_char buffer (char_of_int (!bits lsr 32));
-  end;
-  Buffer.contents buffer
+    Faraday.write_uint8 t (!bits lsr 32);
+  end
 
 let add_output buffer = function
   | Some c -> Buffer.add_char buffer c

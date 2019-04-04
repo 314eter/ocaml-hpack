@@ -1,5 +1,9 @@
 (executable
-  (name test_cases)
-  (modes exe)
-  (modules test_cases)
+  (name hpack_test_case)
+  (modules hpack_test_case)
   (libraries hpack yojson hex))
+
+(alias
+  (name runtest)
+  (deps (source_tree hpack-test-case))
+  (action (chdir hpack-test-case (run %{exe:hpack_test_case.exe}))))

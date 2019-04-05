@@ -94,7 +94,6 @@ let is_no_index token =
 
 let encode ({lookup_table; next_seq; _} as encoder) {name; value; never_index} =
   let token = Static_table.lookup_token name in
-  let never_index = never_index || is_never_index token value in
   let no_index = is_no_index token in
   if never_index || is_never_index token value then
     match token with

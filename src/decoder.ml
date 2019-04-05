@@ -79,7 +79,7 @@ let rec header ({table; _} as decoder) =
     return {name; value; never_index = false}
   else if b < 32 then
     let* (name, value) = header_field table b 4 in
-    return {name; value; never_index = false}
+    return {name; value; never_index = b >= 16}
   else
     let* capacity = any_int b 5 in
     match set_capacity decoder capacity with

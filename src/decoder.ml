@@ -5,10 +5,12 @@ type t = {
   max_capacity : int;
 }
 
-let create max_capacity = {
-  table = Dynamic_table.create max_capacity;
-  max_capacity = max_capacity;
-}
+let create max_capacity =
+  if max_capacity < 0 then raise (Invalid_argument "Decoder.create");
+  {
+    table = Dynamic_table.create max_capacity;
+    max_capacity = max_capacity;
+  }
 
 let set_capacity {table; max_capacity} capacity =
   if capacity > max_capacity then
@@ -45,12 +47,14 @@ let any_string =
     | exception Compression_error -> fail "compression error"
 
 let get_indexed_field table index =
-  if index = 0 || index > Static_table.size + Dynamic_table.size table then
+  if index = 0 then
     raise Decoding_error
   else if index <= Static_table.size then
     Static_table.table.(index - 1)
-  else
+  else if index <= Static_table.size + Dynamic_table.size table then
     Dynamic_table.get table (index - Static_table.size - 1)
+  else
+    raise Decoding_error
 
 let header_field table prefix prefix_length =
   let* index = any_int prefix prefix_length in

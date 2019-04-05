@@ -1,12 +1,32 @@
-Hpack
-=====
+# Hpack
 
-[Hpack] implementation in OCaml. This is a prerequisite for HTTP/2 support.
+[HPACK] implementation in OCaml.
 
 [hpack]: https://tools.ietf.org/html/rfc7541
 
-Compression rate
-----------------
+## Implementation
+
+For parsing and serialization, [angstrom] and [faraday] are used. Encoding
+and decoding algorithms are described in [Exploring HTTP/2 Header Compression].
+
+[angstrom]: https://github.com/inhabitedtype/angstrom
+[faraday]: https://github.com/inhabitedtype/faraday
+[Exploring HTTP/2 Header Compression]: https://www.mew.org/~kazu/doc/paper/hpack-2017.pdf
+
+## Testing
+
+### [Hpack-test-case]
+
+Compatibility with other HPACK implementations and sample test cases.
+
+### Fuzzing
+
+With [crowbar] and [afl-fuzz].
+
+[crowbar]: https://github.com/stedolan/crowbar
+[afl-fuzz]: http://lcamtuf.coredump.cx/afl/
+
+## Compression rate
 
 The compression rate for the sample test cases of [hpack-test-case] is comparable with other implementations
 

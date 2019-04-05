@@ -75,7 +75,7 @@ let rec header ({table; _} as decoder) =
     | exception Decoding_error -> fail "invalid index"
   else if b >= 64 then
     let* (name, value) = header_field table b 6 in
-    Dynamic_table.add table (name, value);
+    Dynamic_table.add table (name, value) |> ignore;
     return {name; value; never_index = false}
   else if b < 32 then
     let* (name, value) = header_field table b 4 in

@@ -60,7 +60,8 @@ let add table entry =
     table.hpack_size <- table.hpack_size + entry_size;
     table.offset <- (table.offset + table.capacity - 1) mod table.capacity;
     table.entries.(table.offset) <- entry;
-  end
+    true
+  end else false
 
 let set_capacity table hpack_capacity =
   table.hpack_capacity <- hpack_capacity;

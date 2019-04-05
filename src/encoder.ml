@@ -44,13 +44,13 @@ let create capacity =
   }
 
 let add ({table; lookup_table; next_seq} as encoder) ((name, value) as entry) =
-  Dynamic_table.add table entry;
-  let map =
-    match LookupTable.find_opt lookup_table name with
-    | Some map -> ValueMap.add value next_seq map
-    | None -> ValueMap.singleton value next_seq in
-  encoder.next_seq <- next_seq + 1;
-  LookupTable.replace lookup_table name map
+  if Dynamic_table.add table entry then
+    let map =
+      match LookupTable.find_opt lookup_table name with
+      | Some map -> ValueMap.add value next_seq map
+      | None -> ValueMap.singleton value next_seq in
+    encoder.next_seq <- next_seq + 1;
+    LookupTable.replace lookup_table name map
 
 let find_token encoder no_index token name value =
   let rec loop i =

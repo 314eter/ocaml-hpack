@@ -62,7 +62,7 @@ let header_field table prefix prefix_length =
     if index = 0 then any_string
     else match get_indexed_field table index with
       | name, _ -> return name
-      | exception Decoding_error -> fail "decoding error" in
+      | exception Decoding_error -> fail "invalid index" in
   let+ value = any_string in
   (name, value)
 
@@ -72,7 +72,7 @@ let rec header ({table; _} as decoder) =
     let* index = any_int b 7 in
     match get_indexed_field table index with
     | name, value -> return {name; value; never_index = false}
-    | exception Decoding_error -> fail "decoding error"
+    | exception Decoding_error -> fail "invalid index"
   else if b >= 64 then
     let* (name, value) = header_field table b 6 in
     Dynamic_table.add table (name, value);
@@ -84,6 +84,6 @@ let rec header ({table; _} as decoder) =
     let* capacity = any_int b 5 in
     match set_capacity decoder capacity with
     | () -> header decoder
-    | exception Decoding_error -> fail "decoding error"
+    | exception Decoding_error -> fail "exceeded size limit"
 
 let headers t = many (header t)

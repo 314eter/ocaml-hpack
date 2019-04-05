@@ -113,6 +113,7 @@ let decode_files () =
   ]
 
 let () =
+  Sys.chdir Sys.argv.(1);
   begin try Unix.mkdir "ocaml-hpack" 0o755
   with Unix.Unix_error (Unix.EEXIST, _, _) -> () end;
   encode_files ();

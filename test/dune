@@ -6,4 +6,4 @@
 (alias
   (name runtest)
   (deps (source_tree hpack-test-case))
-  (action (chdir hpack-test-case (run %{exe:hpack_test_case.exe}))))
+  (action (run %{exe:hpack_test_case.exe} hpack-test-case)))

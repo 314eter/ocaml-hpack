@@ -30,11 +30,13 @@ let any_int prefix prefix_length =
     return i
   else
     let rec loop i k =
-      let* b = any_uint8 in
-      let i = i + (b land 127) lsl k in
-      if b >= 128 then
-        loop i (k + 7)
-      else return i in
+      if k <= 49 then
+        let* b = any_uint8 in
+        let i = i + (b land 127) lsl k in
+        if b >= 128 then
+          loop i (k + 7)
+        else return i
+      else fail "integer overflow" in
     loop i 0
 
 let any_string =

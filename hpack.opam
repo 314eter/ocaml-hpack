@@ -12,7 +12,6 @@ depends: [
   "hex" {test}
   "angstrom"
   "faraday"
-  "ppx_let"
 ]
 build: [
   ["dune" "build" "-p" name "-j" jobs]

@@ -1,5 +1,6 @@
-open S
 open Huffman_table
+
+exception Compression_error
 
 let encoded_length s =
   let length = String.length s in

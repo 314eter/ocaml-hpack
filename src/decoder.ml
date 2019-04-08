@@ -5,6 +5,8 @@ type t = {
   max_capacity : int;
 }
 
+exception Invalid_index
+
 let create max_capacity =
   if max_capacity < 0 then raise (Invalid_argument "Decoder.create");
   {
@@ -14,7 +16,7 @@ let create max_capacity =
 
 let set_capacity {table; max_capacity} capacity =
   if capacity > max_capacity then
-    raise Decoding_error
+    raise (Invalid_argument "Decoder.set_capacity")
   else
     Dynamic_table.set_capacity table capacity
 
@@ -46,17 +48,17 @@ let any_string =
   if b < 128 then return s
   else match Huffman.decode s with
     | s -> return s
-    | exception Compression_error -> fail "compression error"
+    | exception Huffman.Compression_error -> fail "compression error"
 
 let get_indexed_field table index =
   if index = 0 then
-    raise Decoding_error
+    raise Invalid_index
   else if index <= Static_table.size then
     Static_table.table.(index - 1)
   else if index <= Static_table.size + Dynamic_table.size table then
     Dynamic_table.get table (index - Static_table.size - 1)
   else
-    raise Decoding_error
+    raise Invalid_index
 
 let header_field table prefix prefix_length =
   let* index = any_int prefix prefix_length in
@@ -64,17 +66,17 @@ let header_field table prefix prefix_length =
     if index = 0 then any_string
     else match get_indexed_field table index with
       | name, _ -> return name
-      | exception Decoding_error -> fail "invalid index" in
+      | exception Invalid_index -> fail "invalid index" in
   let+ value = any_string in
   (name, value)
 
-let rec header ({table; _} as decoder) =
+let rec header ({table; max_capacity} as decoder) =
   let* b = any_uint8 in
   if b >= 128 then
     let* index = any_int b 7 in
     match get_indexed_field table index with
     | name, value -> return {name; value; never_index = false}
-    | exception Decoding_error -> fail "invalid index"
+    | exception Invalid_index -> fail "invalid index"
   else if b >= 64 then
     let* (name, value) = header_field table b 6 in
     Dynamic_table.add table (name, value) |> ignore;
@@ -84,8 +86,9 @@ let rec header ({table; _} as decoder) =
     return {name; value; never_index = b >= 16}
   else
     let* capacity = any_int b 5 in
-    match set_capacity decoder capacity with
-    | () -> header decoder
-    | exception Decoding_error -> fail "exceeded size limit"
+    if capacity <= max_capacity then begin
+      Dynamic_table.set_capacity table capacity;
+      header decoder
+    end else fail "exceeded size limit"
 
 let headers t = many (header t)

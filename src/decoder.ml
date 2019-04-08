@@ -2,23 +2,20 @@ open S
 
 type t = {
   table : Dynamic_table.t;
-  max_capacity : int;
+  max_size_limit : int;
 }
 
 exception Invalid_index
 
-let create max_capacity =
-  if max_capacity < 0 then raise (Invalid_argument "Decoder.create");
-  {
-    table = Dynamic_table.create max_capacity;
-    max_capacity = max_capacity;
-  }
+let create max_size_limit =
+  if max_size_limit < 0 then raise (Invalid_argument "Decoder.create");
+  {table = Dynamic_table.create max_size_limit; max_size_limit}
 
-let set_capacity {table; max_capacity} capacity =
-  if capacity > max_capacity then
+let set_capacity {table; max_size_limit} max_size =
+  if max_size > max_size_limit then
     raise (Invalid_argument "Decoder.set_capacity")
   else
-    Dynamic_table.set_capacity table capacity
+    Dynamic_table.change_max_size table max_size
 
 open Angstrom
 
@@ -55,7 +52,7 @@ let get_indexed_field table index =
     raise Invalid_index
   else if index <= Static_table.size then
     Static_table.table.(index - 1)
-  else if index <= Static_table.size + Dynamic_table.size table then
+  else if index <= Static_table.size + table.Dynamic_table.size then
     Dynamic_table.get table (index - Static_table.size - 1)
   else
     raise Invalid_index
@@ -70,7 +67,7 @@ let header_field table prefix prefix_length =
   let+ value = any_string in
   (name, value)
 
-let rec header ({table; max_capacity} as decoder) =
+let rec header ({table; max_size_limit} as decoder) =
   let* b = any_uint8 in
   if b >= 128 then
     let* index = any_int b 7 in
@@ -85,9 +82,9 @@ let rec header ({table; max_capacity} as decoder) =
     let* (name, value) = header_field table b 4 in
     return {name; value; never_index = b >= 16}
   else
-    let* capacity = any_int b 5 in
-    if capacity <= max_capacity then begin
-      Dynamic_table.set_capacity table capacity;
+    let* max_size = any_int b 5 in
+    if max_size <= max_size_limit then begin
+      Dynamic_table.change_max_size table max_size;
       header decoder
     end else fail "exceeded size limit"
 

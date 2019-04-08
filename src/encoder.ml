@@ -17,6 +17,7 @@ module ValueMap = Map.Make (String)
 
 type t = {
   table : Dynamic_table.t;
+  mutable min_table_size_change : int option;
   lookup_table : int ValueMap.t LookupTable.t;
   mutable next_seq : int;
 }
@@ -35,15 +36,13 @@ let on_evict lookup_table (name, value) =
     let map = ValueMap.remove value map in
     LookupTable.replace lookup_table name map
 
-let create capacity =
-  let lookup_table = LookupTable.create capacity in
-  {
-    table = Dynamic_table.create ~on_evict:(on_evict lookup_table) capacity;
-    lookup_table;
-    next_seq = 0;
-  }
+let create ?(max_size=4096) () =
+  let lookup_table = LookupTable.create 128 in
+  let table = Dynamic_table.create ~on_evict:(on_evict lookup_table) max_size in
+  let min_table_size_change = if max_size != 4096 then Some max_size else None in
+  {table; min_table_size_change; lookup_table; next_seq = 0}
 
-let add ({table; lookup_table; next_seq} as encoder) ((name, value) as entry) =
+let add ({table; lookup_table; next_seq; _} as encoder) ((name, value) as entry) =
   if Dynamic_table.add table entry then
     let map =
       match LookupTable.find_opt lookup_table name with
@@ -159,9 +158,25 @@ let _encode_header t prefix prefix_length index name value =
     encode_string t value
   end else encode_string t value
 
-let encode_header encoder t ({name; value; _} as header) =
-  match encode encoder header with
+let encode_header ({table; _} as encoder) t ({name; value; _} as header) =
+  begin match encoder.min_table_size_change with
+  | Some min_max_size ->
+    encoder.min_table_size_change <- None;
+    encode_int t 32 5 min_max_size;
+    if table.size > min_max_size then
+      encode_int t 32 5 table.size;
+  | None -> ()
+  end;
+  begin match encode encoder header with
   | Never_index index -> _encode_header t 16 4 index name value
   | No_index index -> _encode_header t 0 4 index name value
   | Do_index index -> _encode_header t 64 6 index name value
   | Index index -> encode_int t 128 7 index
+  end
+
+let change_table_size encoder max_size =
+  Dynamic_table.change_max_size encoder.table max_size;
+  match encoder.min_table_size_change with
+  | Some min_max_size when max_size < min_max_size ->
+    encoder.min_table_size_change <- Some max_size
+  | _ -> ()

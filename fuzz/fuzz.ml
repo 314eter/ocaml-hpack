@@ -18,13 +18,13 @@ let encode encoder headers =
   List.iter (Encoder.encode_header encoder t) headers;
   Faraday.serialize_to_string t
 
-let test_decode capacity s =
-  let decoder = Decoder.create capacity in
+let test_decode max_size_limit s =
+  let decoder = Decoder.create ~max_size_limit () in
   decode decoder s |> ignore
 
-let test_roundtrip capacity headers =
-  let encoder = Encoder.create capacity in
-  let decoder = Decoder.create capacity in
+let test_roundtrip max_size headers =
+  let encoder = Encoder.create ~max_size () in
+  let decoder = Decoder.create ~max_size_limit:max_size () in
   let s = encode encoder headers in
   match decode decoder s with
   | Ok headers' -> check_eq ~pp:(pp_list pp_header) headers headers'

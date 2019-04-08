@@ -2,20 +2,14 @@ open S
 
 type t = {
   table : Dynamic_table.t;
-  max_size_limit : int;
+  mutable max_size_limit : int;
 }
 
 exception Invalid_index
 
-let create max_size_limit =
+let create ?(max_size_limit=4096) () =
   if max_size_limit < 0 then raise (Invalid_argument "Decoder.create");
   {table = Dynamic_table.create max_size_limit; max_size_limit}
-
-let set_capacity {table; max_size_limit} max_size =
-  if max_size > max_size_limit then
-    raise (Invalid_argument "Decoder.set_capacity")
-  else
-    Dynamic_table.change_max_size table max_size
 
 open Angstrom
 
@@ -69,7 +63,15 @@ let header_field table prefix prefix_length =
 
 let rec header ({table; max_size_limit} as decoder) =
   let* b = any_uint8 in
-  if b >= 128 then
+  if b >= 32 && b < 64 then
+    let* max_size = any_int b 5 in
+    if max_size <= max_size_limit then begin
+      Dynamic_table.change_max_size table max_size;
+      header decoder
+    end else fail "exceeded size limit"
+  else if table.max_size > max_size_limit then
+    fail "exceeded size limit"
+  else if b >= 128 then
     let* index = any_int b 7 in
     match get_indexed_field table index with
     | name, value -> return {name; value; never_index = false}
@@ -78,14 +80,12 @@ let rec header ({table; max_size_limit} as decoder) =
     let* (name, value) = header_field table b 6 in
     Dynamic_table.add table (name, value) |> ignore;
     return {name; value; never_index = false}
-  else if b < 32 then
+  else
     let* (name, value) = header_field table b 4 in
     return {name; value; never_index = b >= 16}
-  else
-    let* max_size = any_int b 5 in
-    if max_size <= max_size_limit then begin
-      Dynamic_table.change_max_size table max_size;
-      header decoder
-    end else fail "exceeded size limit"
 
 let headers t = many (header t)
+
+let change_table_size_limit decoder max_size_limit =
+  Dynamic_table.change_max_size decoder.table max_size_limit;
+  decoder.max_size_limit <- max_size_limit

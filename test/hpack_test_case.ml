@@ -35,12 +35,16 @@ let parse_file file =
   end
 
 let encode cases =
-  let encoder = Encoder.create 4096 in
-  cases |> List.map begin fun {headers; _} ->
+  let encoder = Encoder.create () in
+  cases |> List.map begin fun {header_table_size; headers; _} ->
+    begin match header_table_size with
+    | Some max_size -> Encoder.change_table_size encoder max_size
+    | None -> ()
+    end;
     let t = Faraday.create 1200 in
     List.iter (Encoder.encode_header encoder t) headers;
     let wire = Faraday.serialize_to_string t in
-    {header_table_size = None; wire; headers}
+    {header_table_size; wire; headers}
   end
 
 let encode_file file =
@@ -74,10 +78,10 @@ let header_equal ({name; value; _}, {name = name'; value = value'; _}) =
   name = name' && value = value'
 
 let decode cases =
-  let decoder = Decoder.create 65536 in
+  let decoder = Decoder.create () in
   List.iter begin fun {header_table_size; wire; headers; _} ->
     begin match header_table_size with
-    | Some capacity -> Decoder.set_capacity decoder capacity
+    | Some max_size -> Decoder.change_table_size_limit decoder max_size
     | None -> ()
     end;
     match Angstrom.parse_string (Decoder.headers decoder) wire with

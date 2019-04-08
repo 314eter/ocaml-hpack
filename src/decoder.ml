@@ -50,10 +50,10 @@ let any_string =
 let get_indexed_field table index =
   if index = 0 then
     raise Invalid_index
-  else if index <= Static_table.size then
+  else if index <= Static_table.length then
     Static_table.table.(index - 1)
-  else if index <= Static_table.size + table.Dynamic_table.size then
-    Dynamic_table.get table (index - Static_table.size - 1)
+  else if index <= Static_table.length + table.Dynamic_table.length then
+    Dynamic_table.get table (index - Static_table.length - 1)
   else
     raise Invalid_index
 

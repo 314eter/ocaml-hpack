@@ -66,7 +66,7 @@ let find_token encoder no_index token name value =
   loop token
 
 let seq_to_index next_seq seq =
-  Static_table.size + next_seq - seq
+  Static_table.length + next_seq - seq
 
 let is_never_index token value =
   match token with

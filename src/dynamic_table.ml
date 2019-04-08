@@ -14,21 +14,20 @@ type t = {
   mutable max_size : int;
   (* The maximum allowed size of the dynamic table
      If this limit is reached, entries are evicted. *)
-  evict_callback : (string * string) -> unit;
-  (* [evict_callback entry] is called when [entry] is evicted *)
+  on_evict : (string * string) -> unit;
+  (* [on_evict entry] is called when [entry] is evicted *)
 }
 
 let default_entry = ("", "")
-let default_evict_callback = ignore
 
-let create ?(evict_callback=default_evict_callback) max_size = {
+let create ?(on_evict=ignore) max_size = {
   entries = Array.make 128 default_entry;
   capacity = 128;
   offset = 0;
   length = 0;
   size = 0;
   max_size;
-  evict_callback;
+  on_evict;
 }
 
 let get {entries; capacity; offset; _} i =
@@ -37,13 +36,13 @@ let get {entries; capacity; offset; _} i =
 let entry_size (name, value) =
   String.length name + String.length value + 32
 
-let evict_one ({entries; capacity; offset; length; evict_callback; _} as table) =
+let evict_one ({entries; capacity; offset; length; on_evict; _} as table) =
   let i = (offset + length - 1) mod capacity in
   let entry = entries.(i) in
   entries.(i) <- default_entry;
   table.length <- length - 1;
   table.size <- table.size - entry_size entry;
-  evict_callback entry
+  on_evict entry
 
 let increase_capacity table =
   let capacity = 2 * table.capacity in

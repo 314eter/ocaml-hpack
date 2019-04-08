@@ -27,7 +27,7 @@ type encoding =
   | Do_index of int
   | Index of int
 
-let evicted lookup_table (name, value) =
+let on_evict lookup_table (name, value) =
   let map = LookupTable.find lookup_table name in
   if ValueMap.cardinal map = 1 then
     LookupTable.remove lookup_table name
@@ -38,7 +38,7 @@ let evicted lookup_table (name, value) =
 let create capacity =
   let lookup_table = LookupTable.create capacity in
   {
-    table = Dynamic_table.create ~evict_callback:(evicted lookup_table) capacity;
+    table = Dynamic_table.create ~on_evict:(on_evict lookup_table) capacity;
     lookup_table;
     next_seq = 0;
   }

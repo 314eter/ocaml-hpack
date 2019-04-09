@@ -7,7 +7,7 @@ license: "MIT"
 dev-repo: "git+https://github.com/314eter/ocaml-hpack.git"
 bug-reports: "https://github.com/314eter/ocaml-hpack/issues"
 depends: [
-  "ocaml" {>= "4.07"}
+  "ocaml" {>= "4.04"}
   "dune" {build}
   "yojson" {with-test}
   "hex" {with-test}

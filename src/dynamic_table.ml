@@ -20,15 +20,10 @@ type t = {
 
 let default_entry = ("", "")
 
-let create ?(on_evict=ignore) max_size = {
-  entries = Array.make 128 default_entry;
-  capacity = 128;
-  offset = 0;
-  length = 0;
-  size = 0;
-  max_size;
-  on_evict;
-}
+let create ?(on_evict=ignore) max_size =
+  let capacity = 128 in
+  let entries = Array.make capacity default_entry in
+  {entries; capacity; offset = 0; length = 0; size = 0; max_size; on_evict}
 
 let get {entries; capacity; offset; _} i =
   entries.((offset + i) mod capacity)
@@ -44,8 +39,7 @@ let evict_one ({entries; capacity; offset; length; on_evict; _} as table) =
   table.size <- table.size - entry_size entry;
   on_evict entry
 
-let increase_capacity table =
-  let capacity = 2 * table.capacity in
+let resize table capacity =
   let entries = Array.init capacity begin fun i ->
       if i < table.length then get table i
       else default_entry
@@ -61,7 +55,7 @@ let add table entry =
   done;
   if table.size + entry_size <= table.max_size then begin
     if table.length = table.capacity then
-      increase_capacity table;
+      resize table (2 * table.capacity);
     let offset = (table.offset + table.capacity - 1) mod table.capacity in
     table.entries.(offset) <- entry;
     table.offset <- offset;
@@ -72,6 +66,9 @@ let add table entry =
 
 let change_max_size table max_size =
   table.max_size <- max_size;
-  while table.size > table.max_size do
+  while table.size > max_size do
     evict_one table
-  done
+  done;
+  let capacity = max 128 (max_size lsr 5) in
+  if capacity < table.capacity then
+    resize table capacity

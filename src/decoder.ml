@@ -86,6 +86,9 @@ let rec header ({table; max_size_limit} as decoder) =
 
 let headers t = many (header t)
 
-let change_table_size_limit decoder max_size_limit =
-  Dynamic_table.change_max_size decoder.table max_size_limit;
-  decoder.max_size_limit <- max_size_limit
+let change_table_size_limit ({table; _} as decoder) max_size_limit =
+  if max_size_limit < 0 then
+    raise (Invalid_argument "Decoder.change_table_size_limit");
+  decoder.max_size_limit <- max_size_limit;
+  if max_size_limit < table.max_size then
+    Dynamic_table.change_max_size table max_size_limit

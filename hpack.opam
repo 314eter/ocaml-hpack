@@ -4,7 +4,7 @@ maintainer: "Pieter Goetschalckx <3.14.e.ter@gmail.com>"
 authors: ["Pieter Goetschalckx <3.14.e.ter@gmail.com>"]
 homepage: "https://github.com/314eter/ocaml-hpack"
 license: "MIT"
-dev-repo: "https://github.com/314eter/ocaml-hpack.git"
+dev-repo: "git+https://github.com/314eter/ocaml-hpack.git"
 bug-reports: "https://github.com/314eter/ocaml-hpack/issues"
 depends: [
   "ocaml" {>= "4.07"}

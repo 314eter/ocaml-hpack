@@ -1,4 +1,3 @@
-(executables
-  (names fuzz)
-  (libraries hpack crowbar angstrom faraday)
-  (modes exe))
+(test
+  (name fuzz)
+  (libraries hpack crowbar angstrom faraday))

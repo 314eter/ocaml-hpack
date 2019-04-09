@@ -67,8 +67,8 @@ let output_encode_table oc encode_table =
 let output_transition oc (id, accept, symbol) =
   let output_bool oc b = Printf.fprintf oc (if b then "true" else "false") in
   let output_symbol oc = function
-    | Some c -> Printf.fprintf oc "Some %C" c
-    | None -> Printf.fprintf oc "None" in
+    | Some c -> Printf.fprintf oc "true, %C" c
+    | None -> Printf.fprintf oc "false, '\\000'" in
   Printf.fprintf oc "(%d, %a, %a)" id output_bool accept output_symbol symbol
 
 let output_decode_table oc tree =

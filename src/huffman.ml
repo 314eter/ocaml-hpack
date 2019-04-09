@@ -3,12 +3,11 @@ open Huffman_table
 exception Compression_error
 
 let encoded_length s =
-  let length = String.length s in
-  let rec loop bits i =
+  let rec loop length bits i =
     if i < length then
-      loop (bits + snd encode_table.(int_of_char s.[i])) (i + 1)
+      loop length (bits + snd encode_table.(int_of_char s.[i])) (i + 1)
     else (bits + 7) / 8 in
-  loop 0 0
+  loop (String.length s) 0 0
 
 let encode t s =
   let bits = ref 0 and bits_left = ref 40 in
@@ -27,25 +26,22 @@ let encode t s =
     Faraday.write_uint8 t (!bits lsr 32);
   end
 
-let add_output buffer = function
-  | Some c -> Buffer.add_char buffer c
-  | None -> ()
-
 let decode s =
   let length = String.length s in
-  let buffer = Buffer.create length in
-  let rec loop id accept i =
+  let rec loop length buffer id accept i =
     if i < length then
       let input = int_of_char s.[i] in
       let index = (id lsl 4) + (input lsr 4) in
-      let (id, _, output) = decode_table.(index) in
+      let (id, _, output, c) = decode_table.(index) in
       if id < 0 then raise Compression_error;
-      add_output buffer output;
+      if output then Buffer.add_char buffer c;
       let index = (id lsl 4) + (input land 0x0f) in
-      let (id, accept, output) = decode_table.(index) in
+      let (id, accept, output, c) = decode_table.(index) in
       if id < 0 then raise Compression_error;
-      add_output buffer output;
-      loop id accept (i + 1)
-    else if not accept then raise Compression_error in
-  loop 0 true 0;
-  Buffer.contents buffer
+      if output then Buffer.add_char buffer c;
+      loop length buffer id accept (i + 1)
+    else if not accept then
+      raise Compression_error
+    else
+      Buffer.contents buffer in
+  loop length (Buffer.create length) 0 true 0

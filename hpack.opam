@@ -1,20 +1,23 @@
-opam-version: "1.2"
+opam-version: "2.0"
+synopsis: "HPACK implementation in OCaml"
 maintainer: "Pieter Goetschalckx <3.14.e.ter@gmail.com>"
 authors: ["Pieter Goetschalckx <3.14.e.ter@gmail.com>"]
 homepage: "https://github.com/314eter/ocaml-hpack"
 license: "MIT"
 dev-repo: "https://github.com/314eter/ocaml-hpack.git"
 bug-reports: "https://github.com/314eter/ocaml-hpack/issues"
-available: [ ocaml-version >= "4.07.0"]
 depends: [
+  "ocaml" {>= "4.07"}
   "dune" {build}
-  "yojson" {test}
-  "hex" {test}
-  "crowbar" {test}
+  "yojson" {with-test}
+  "hex" {with-test}
+  "crowbar" {with-test}
+  "odoc" {with-doc}
   "angstrom"
   "faraday"
 ]
 build: [
-  ["dune" "build" "-p" name "-j" jobs]
+  ["dune" "build" "-p" name "-j" jobs] {with-test}
+  ["dune" "runtest" "-p" name "-j" jobs] {with-test}
+  ["dune" "build" "@doc" "-p" name "-j" jobs] {with-doc}
 ]
-build-test: [["dune" "runtest" "-p" name "-j" jobs]]

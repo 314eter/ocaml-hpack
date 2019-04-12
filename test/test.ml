@@ -87,9 +87,17 @@ let test_never_index =
      \x10\x03ABC\x03XYZ" in
   test entries s
 
+let test_huffman =
+  let entries = [
+    Header {name = "abc"; value = "012"; never_index = false};
+  ] in
+  let s = "\x40\x82\x1c\x64\x82\x00\x45" in
+  test entries s
+
 let () =
   Alcotest.run "Hpack" [
     "Entry Eviction", test_eviction; (* RFC7541§4.4 *)
     "Table Size Update", test_size_update; (* RFC7541§4.2 *)
     "Never Index", test_never_index; (* RFC7541§7.1.3 *)
+    "Huffman Encoding", test_huffman; (* RFC7541§5.2 *)
   ]

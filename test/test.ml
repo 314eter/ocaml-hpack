@@ -77,8 +77,19 @@ let test_size_update =
      \x40\x03ABC\x03XYZ" in
   test entries s
 
+let test_never_index =
+  let entries = [
+    Header {name = "ABC"; value = "XYZ"; never_index = true};
+    Header {name = "ABC"; value = "XYZ"; never_index = true};
+  ] in
+  let s =
+    "\x10\x03ABC\x03XYZ\
+     \x10\x03ABC\x03XYZ" in
+  test entries s
+
 let () =
   Alcotest.run "Hpack" [
     "Entry Eviction", test_eviction;
     "Table Size Update", test_size_update;
+    "Never Index", test_never_index;
   ]

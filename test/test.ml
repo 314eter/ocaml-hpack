@@ -89,7 +89,7 @@ let test_never_index =
 
 let () =
   Alcotest.run "Hpack" [
-    "Entry Eviction", test_eviction;
-    "Table Size Update", test_size_update;
-    "Never Index", test_never_index;
+    "Entry Eviction", test_eviction; (* RFC7541§4.4 *)
+    "Table Size Update", test_size_update; (* RFC7541§4.2 *)
+    "Never Index", test_never_index; (* RFC7541§7.1.3 *)
   ]

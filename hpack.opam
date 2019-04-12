@@ -12,6 +12,7 @@ depends: [
   "yojson" {with-test}
   "hex" {with-test}
   "crowbar" {with-test}
+  "alcotest" {with-test}
   "odoc" {with-doc}
   "angstrom"
   "faraday"

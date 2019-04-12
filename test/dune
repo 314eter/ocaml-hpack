@@ -3,6 +3,11 @@
   (modules hpack_test_case)
   (libraries hpack yojson hex))
 
+(test
+  (name test)
+  (modules test)
+  (libraries hpack alcotest))
+
 (alias
   (name runtest)
   (deps (source_tree hpack-test-case))

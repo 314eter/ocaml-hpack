@@ -163,8 +163,8 @@ let encode_header ({table; _} as encoder) t ({name; value; _} as header) =
   | Some min_max_size ->
     encoder.min_table_size_change <- None;
     encode_int t 32 5 min_max_size;
-    if table.size > min_max_size then
-      encode_int t 32 5 table.size;
+    if table.max_size > min_max_size then
+      encode_int t 32 5 table.max_size;
   | None -> ()
   end;
   begin match encode encoder header with
@@ -177,6 +177,5 @@ let encode_header ({table; _} as encoder) t ({name; value; _} as header) =
 let change_table_size encoder max_size =
   Dynamic_table.change_max_size encoder.table max_size;
   match encoder.min_table_size_change with
-  | Some min_max_size when max_size < min_max_size ->
-    encoder.min_table_size_change <- Some max_size
-  | _ -> ()
+  | Some min_max_size when min_max_size < max_size -> ()
+  | _ -> encoder.min_table_size_change <- Some max_size

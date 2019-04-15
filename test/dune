@@ -7,3 +7,13 @@
   (name runtest)
   (deps (source_tree hpack-test-case))
   (action (run %{exe:hpack_test_case.exe} hpack-test-case)))
+
+(executable
+  (name benchmark)
+  (modules benchmark)
+  (libraries hpack yojson hex))
+
+(alias
+  (name benchmark)
+  (deps (source_tree hpack-test-case))
+  (action (run %{exe:benchmark.exe} hpack-test-case/raw-data)))

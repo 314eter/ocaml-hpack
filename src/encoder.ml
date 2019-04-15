@@ -45,9 +45,10 @@ let create ?(max_size=4096) () =
 let add ({table; lookup_table; next_seq; _} as encoder) ((name, value) as entry) =
   if Dynamic_table.add table entry then
     let map =
-      match LookupTable.find_opt lookup_table name with
-      | Some map -> ValueMap.add value next_seq map
-      | None -> ValueMap.singleton value next_seq in
+      match LookupTable.find lookup_table name with
+      | map -> ValueMap.add value next_seq map
+      | exception Not_found -> ValueMap.singleton value next_seq
+    in
     encoder.next_seq <- next_seq + 1;
     LookupTable.replace lookup_table name map
 
@@ -98,33 +99,40 @@ let encode ({lookup_table; next_seq; _} as encoder) {name; value; never_index} =
     match token with
     | Some token -> Never_index (token + 1)
     | None ->
-      match LookupTable.find_opt lookup_table name with
-      | Some map ->
+      match LookupTable.find lookup_table name with
+      | map ->
         Never_index (seq_to_index next_seq (snd (ValueMap.choose map)))
-      | None -> Never_index 0
+      | exception Not_found -> Never_index 0
   else
-    match token, LookupTable.find_opt lookup_table name with
-    | Some token, Some map ->
-      begin match ValueMap.find_opt value map with
-      | Some seq -> Index (seq_to_index next_seq seq)
-      | None -> find_token encoder no_index token name value
+    begin match token with
+    | Some token ->
+      begin match LookupTable.find lookup_table name with
+      | map ->
+        begin match ValueMap.find value map with
+        | seq -> Index (seq_to_index next_seq seq)
+        | exception Not_found -> find_token encoder no_index token name value
+        end
+      | exception Not_found -> find_token encoder no_index token name value
       end
-    | Some token, None -> find_token encoder no_index token name value
-    | None, Some map ->
-      begin match ValueMap.find_opt value map with
-      | Some seq -> Index (seq_to_index next_seq seq)
-      | None ->
-        let index = seq_to_index next_seq (snd (ValueMap.choose map)) in
-        if no_index then No_index index else begin
+    | None ->
+      begin match LookupTable.find lookup_table name with
+      | map ->
+        begin match ValueMap.find value map with
+        | seq -> Index (seq_to_index next_seq seq)
+        | exception Not_found ->
+          let index = seq_to_index next_seq (snd (ValueMap.choose map)) in
+          if no_index then No_index index else begin
+            add encoder (name, value);
+            Do_index index
+          end
+        end
+      | exception Not_found ->
+        if no_index then No_index 0 else begin
           add encoder (name, value);
-          Do_index index
+          Do_index 0
         end
       end
-    | None, None ->
-      if no_index then No_index 0 else begin
-        add encoder (name, value);
-        Do_index 0
-      end
+    end
 
 let encode_int t prefix prefix_length i =
   let max_prefix = 1 lsl prefix_length - 1 in

@@ -1,4 +1,5 @@
 # Hpack
+[![Build Status](https://travis-ci.org/314eter/ocaml-hpack.svg?branch=master)](https://travis-ci.org/314eter/ocaml-hpack)
 
 [HPACK] implementation in OCaml.
 

@@ -1,5 +1,3 @@
-open S
-
 type t = {
   table : Dynamic_table.t;
   mutable max_size_limit : int;
@@ -78,15 +76,15 @@ let rec header ({table; max_size_limit; max_field_size} as decoder) =
   else if b >= 128 then
     let* index = any_int b 7 in
     match get_indexed_field table index with
-    | name, value -> return {name; value; never_index = false}
+    | name, value -> return (Header.make name value)
     | exception Invalid_index -> fail "invalid index"
   else if b >= 64 then
     let* (name, value) = header_field table max_field_size b 6 in
     Dynamic_table.add table (name, value) |> ignore;
-    return {name; value; never_index = false}
+    return (Header.make name value)
   else
     let* (name, value) = header_field table max_field_size b 4 in
-    return {name; value; never_index = b >= 16}
+    return (Header.make ~never_index:(b >= 16) name value)
 
 let headers t = many (header t)
 

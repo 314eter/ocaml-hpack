@@ -1,5 +1,3 @@
-open S
-
 module F = Faraday
 
 module TokenSet = Set.Make (struct
@@ -92,7 +90,7 @@ let is_no_index token =
   | Some token -> TokenSet.mem token no_index_tokens
   | None -> false
 
-let encode ({lookup_table; next_seq; _} as encoder) {name; value; never_index} =
+let encode ({lookup_table; next_seq; _} as encoder) Header.{name; value; never_index} =
   let token = Static_table.lookup_token name in
   let no_index = is_no_index token in
   if never_index || is_never_index token value then
@@ -166,7 +164,7 @@ let _encode_header t prefix prefix_length index name value =
     encode_string t value
   end else encode_string t value
 
-let encode_header ({table; _} as encoder) t ({name; value; _} as header) =
+let encode_header ({table; _} as encoder) t (Header.{name; value; _} as header) =
   begin match encoder.min_table_size_change with
   | Some min_max_size ->
     encoder.min_table_size_change <- None;

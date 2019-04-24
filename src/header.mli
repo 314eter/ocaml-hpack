@@ -18,3 +18,7 @@ val value : t -> string
 
 val never_index : t -> bool
 (** [never_index header] is true if this header field will never be indexed. *)
+
+val size : t -> int
+(** Returns the size of a header field, which is the length of the name and
+    value in octets plus an overhead of 32 octets. *)

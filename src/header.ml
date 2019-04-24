@@ -11,3 +11,6 @@ let name {name; _} = name
 let value {value; _} = value
 
 let never_index {never_index; _} = never_index
+
+let size {name; value; _} =
+  String.length name + String.length value + 32

@@ -1,5 +1,3 @@
-open S
-
 type t
 
 val create : ?max_size:int -> unit -> t
@@ -7,7 +5,7 @@ val create : ?max_size:int -> unit -> t
     maximum size [max_size]. The default is 4096. The chosen size must be lower
     than or equal to the maximum set by the protocol. *)
 
-val encode_header : t -> Faraday.t -> header -> unit
+val encode_header : t -> Faraday.t -> Header.t -> unit
 (** [encode_header encoder t header] writes the encoding of [header] to [t] *)
 
 val change_table_size : t -> int -> unit

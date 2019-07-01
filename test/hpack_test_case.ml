@@ -10,7 +10,7 @@ end
 type case = {
   header_table_size : int option;
   wire : string;
-  headers : header list;
+  headers : Header.t list;
 }
 
 let parse_file file =
@@ -29,7 +29,7 @@ let parse_file file =
         |> Json.filter_assoc
         |> List.flatten
         |> List.map begin fun (name, value) ->
-          {name; value = Json.to_string value; never_index = false}
+          Header.make name (Json.to_string value)
         end
     }
   end
@@ -59,7 +59,7 @@ let encode_file file =
           "seqno", `Int seqno;
           "wire", `String (Hex.of_string wire);
           "headers", `List (
-            headers |> List.map @@ fun {name; value; _} ->
+            headers |> List.map @@ fun Header.{name; value; _} ->
             `Assoc [(name, `String value)]
           )
         ]
@@ -74,7 +74,7 @@ let encode_files () =
   let files = Array.to_list (Sys.readdir "raw-data") in
   List.iter encode_file files
 
-let header_equal ({name; value; _}, {name = name'; value = value'; _}) =
+let header_equal Header.({name; value; _}, {name = name'; value = value'; _}) =
   name = name' && value = value'
 
 let decode cases =

@@ -1,19 +1,19 @@
 open Crowbar
 open Hpack
 
-type entry = Headers of header list | SizeUpdate of int * int
+type entry = Headers of Header.t list | SizeUpdate of int * int
 
 
 (* Generators *)
 
-let pp_header ff {name; value; never_index} =
+let pp_header ff Header.{name; value; never_index} =
   Format.fprintf ff "@[<hv 2>{ name = %S;@ value = %S;@ never_index = %s; }@]"
     name value (if never_index then "true" else "false")
 
 let header =
   with_printer pp_header @@
   map [bytes; bytes; bool] @@ fun name value never_index ->
-  {name; value; never_index}
+  Header.make ~never_index name value
 
 let pp_entry ff = function
   | Headers headers ->

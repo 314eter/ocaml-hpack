@@ -86,7 +86,7 @@ let rec header ({table; max_size_limit; max_field_size} as decoder) =
     let* (name, value) = header_field table max_field_size b 4 in
     return (Header.make ~never_index:(b >= 16) name value)
 
-let headers t = many (header t)
+let headers t = many (header t) <* end_of_input
 
 let change_table_size_limit ({table; _} as decoder) max_size_limit =
   if max_size_limit < 0 then

@@ -9,7 +9,7 @@ val create : ?max_size_limit:int -> ?max_field_size:int -> unit -> t
     field. The default is 4096.
 *)
 
-val header : t -> Header.t Angstrom.t
+val header : t -> Header.t option Angstrom.t
 (** A parser for one header *)
 
 val headers : t -> Header.t list Angstrom.t

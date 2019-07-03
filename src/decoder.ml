@@ -64,29 +64,39 @@ let header_field table max_size prefix prefix_length =
   (name, value)
 
 let rec header ({table; max_size_limit; max_field_size} as decoder) =
-  let* b = any_uint8 in
-  if b >= 32 && b < 64 then
-    let* max_size = any_int b 5 <* commit in
-    if max_size <= max_size_limit then begin
-      Dynamic_table.change_max_size table max_size;
-      header decoder
-    end else fail "exceeded size limit"
-  else if table.max_size > max_size_limit then
-    fail "exceeded size limit"
-  else if b >= 128 then
-    let* index = any_int b 7 in
-    match get_indexed_field table index with
-    | name, value -> return (Header.make name value)
-    | exception Invalid_index -> fail "invalid index"
-  else if b >= 64 then
-    let* (name, value) = header_field table max_field_size b 6 <* commit in
-    Dynamic_table.add table (name, value) |> ignore;
-    return (Header.make name value)
-  else
-    let* (name, value) = header_field table max_field_size b 4 <* commit in
-    return (Header.make ~never_index:(b >= 16) name value)
+  at_end_of_input >>= function
+  | true -> return None
+  | false ->
+    let* b = any_uint8 in
+    if b >= 32 && b < 64 then
+      let* max_size = any_int b 5 <* commit in
+      if max_size <= max_size_limit then begin
+        Dynamic_table.change_max_size table max_size;
+        header decoder
+      end else fail "exceeded size limit"
+    else if table.max_size > max_size_limit then
+      fail "exceeded size limit"
+    else if b >= 128 then
+      let* index = any_int b 7 <* commit in
+      match get_indexed_field table index with
+      | name, value -> return (Some (Header.make name value))
+      | exception Invalid_index -> fail "invalid index"
+    else if b >= 64 then
+      let* (name, value) = header_field table max_field_size b 6 <* commit in
+      Dynamic_table.add table (name, value) |> ignore;
+      return (Some (Header.make name value))
+    else
+      let* (name, value) = header_field table max_field_size b 4 <* commit in
+      return (Some (Header.make ~never_index:(b >= 16) name value))
 
-let headers t = many (header t) <* end_of_input
+let headers t =
+  fix begin fun m ->
+    header t >>= function
+    | Some h ->
+      let* hs = m in
+      return (h :: hs)
+    | None -> return []
+  end
 
 let change_table_size_limit ({table; _} as decoder) max_size_limit =
   if max_size_limit < 0 then

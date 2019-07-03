@@ -66,7 +66,7 @@ let header_field table max_size prefix prefix_length =
 let rec header ({table; max_size_limit; max_field_size} as decoder) =
   let* b = any_uint8 in
   if b >= 32 && b < 64 then
-    let* max_size = any_int b 5 in
+    let* max_size = any_int b 5 <* commit in
     if max_size <= max_size_limit then begin
       Dynamic_table.change_max_size table max_size;
       header decoder
@@ -79,11 +79,11 @@ let rec header ({table; max_size_limit; max_field_size} as decoder) =
     | name, value -> return (Header.make name value)
     | exception Invalid_index -> fail "invalid index"
   else if b >= 64 then
-    let* (name, value) = header_field table max_field_size b 6 in
+    let* (name, value) = header_field table max_field_size b 6 <* commit in
     Dynamic_table.add table (name, value) |> ignore;
     return (Header.make name value)
   else
-    let* (name, value) = header_field table max_field_size b 4 in
+    let* (name, value) = header_field table max_field_size b 4 <* commit in
     return (Header.make ~never_index:(b >= 16) name value)
 
 let headers t = many (header t) <* end_of_input

@@ -25,25 +25,28 @@ let rec headers_of_entries = function
   | Size _ :: entries -> headers_of_entries entries
   | [] -> []
 
-let test entries s = [
-  "Encode", `Quick, begin fun () ->
-    let t = Faraday.create 100 in
-    let encoder = Encoder.create () in
-    entries |> List.iter begin function
-    | Header header -> Encoder.encode_header encoder t header
-    | Size size -> Encoder.change_table_size encoder size
-    end;
-    let s' = Faraday.serialize_to_string t in
-    Alcotest.(check encoding) "same encoding" s s'
-  end;
-  "Decode", `Quick, begin fun () ->
-    let decoder = Decoder.create () in
-    Alcotest.(check (result (list header) reject))
-      "same headers"
-      (Angstrom.parse_string (Decoder.headers decoder) s)
-      (Ok (headers_of_entries entries))
-  end;
-]
+let test_encode entries s =
+  ("Encode", `Quick, begin fun () ->
+      let t = Faraday.create 100 in
+      let encoder = Encoder.create () in
+      entries |> List.iter begin function
+      | Header header -> Encoder.encode_header encoder t header
+      | Size size -> Encoder.change_table_size encoder size
+      end;
+      let s' = Faraday.serialize_to_string t in
+      Alcotest.(check encoding) "same encoding" s s'
+    end)
+
+let test_decode entries s =
+  ("Decode", `Quick, begin fun () ->
+      let decoder = Decoder.create () in
+      Alcotest.(check (result (list header) reject))
+        "same headers"
+        (Angstrom.parse_string (Decoder.headers decoder) s)
+        (Ok (headers_of_entries entries))
+    end)
+
+let test entries s = [test_encode entries s; test_decode entries s]
 
 let test_static =
   let entries = [
@@ -126,6 +129,13 @@ let test_eviction =
      \x40\x04ABCD\x03XYZ" in
   test entries s
 
+let test_empty = test [] ""
+
+let test_resize_only = [
+  test_encode [Size 0] "";
+  test_decode [Size 0] "\x20"
+]
+
 let () =
   Alcotest.run "Hpack" [
     "Static Indexing", test_static; (* RFC7541§2.3.1 *)
@@ -135,4 +145,6 @@ let () =
     "Never Index", test_never_index; (* RFC7541§7.1.3 *)
     "Table Size Update", test_size_update; (* RFC7541§4.2 *)
     "Entry Eviction", test_eviction; (* RFC7541§4.4 *)
+    "Empty header list", test_empty;
+    "Empty header list with table size update", test_resize_only;
   ]

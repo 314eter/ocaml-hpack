@@ -7,7 +7,7 @@ type node = {
 } and child = Node of node | Symbol of char | Missing
 
 let make_node ?(left=Missing) ?(right=Missing) () =
-  { id = 0; accept = false; left; right; transitions = Array.make 16 (-1, false, None) }
+  { id = 0; accept = false; left; right; transitions = Array.make 16 (256, false, None) }
 
 let rec add_symbol tree symbol = function
   | [] -> Symbol symbol
@@ -42,7 +42,7 @@ let rec traverse root transitions failed symbol node remaining i =
     | Missing -> (true, root, None) in
   if remaining = 0 then begin
     transitions.(i) <-
-      if failed then (-1, false, None)
+      if failed then (256, false, None)
       else (node.id, node.accept, symbol);
     i + 1
   end else
@@ -65,11 +65,11 @@ let output_encode_table oc encode_table =
   Printf.fprintf oc "|]\n\n"
 
 let output_transition oc (id, accept, symbol) =
-  let output_bool oc b = Printf.fprintf oc (if b then "true" else "false") in
-  let output_symbol oc = function
-    | Some c -> Printf.fprintf oc "true, %C" c
-    | None -> Printf.fprintf oc "false, '\\000'" in
-  Printf.fprintf oc "(%d, %a, %a)" id output_bool accept output_symbol symbol
+  let s =
+    match symbol with
+    | Some c -> 1 lsl 8 + int_of_char c
+    | None -> 0 in
+  Printf.fprintf oc "%d" (id lsl 10 + (if accept then 1 else 0) lsl 9 + s)
 
 let output_decode_table oc tree =
   Printf.fprintf oc "let decode_table = [|\n";

@@ -27,21 +27,22 @@ let encode t s =
   end
 
 let decode s =
-  let length = String.length s in
-  let rec loop length buffer id accept i =
+  let rec loop length buffer id x i =
     if i < length then
       let input = int_of_char s.[i] in
       let index = (id lsl 4) + (input lsr 4) in
-      let (id, _, output, c) = decode_table.(index) in
-      if id < 0 then raise Compression_error;
-      if output then Buffer.add_char buffer c;
+      let x = decode_table.(index) in
+      let id = x lsr 10 in
+      if id > 255 then raise Compression_error;
+      if x land 0b100000000 != 0 then Buffer.add_char buffer (char_of_int (x land 0b11111111));
       let index = (id lsl 4) + (input land 0x0f) in
-      let (id, accept, output, c) = decode_table.(index) in
-      if id < 0 then raise Compression_error;
-      if output then Buffer.add_char buffer c;
-      loop length buffer id accept (i + 1)
-    else if not accept then
+      let x = decode_table.(index) in
+      let id = x lsr 10 in
+      if id > 255 then raise Compression_error;
+      if x land 0b100000000 != 0 then Buffer.add_char buffer (char_of_int (x land 0b11111111));
+      loop length buffer id x (i + 1)
+    else if x land 0b1000000000 = 0 then
       raise Compression_error
-    else
-      Buffer.contents buffer in
-  loop length (Buffer.create length) 0 true 0
+    else Buffer.contents buffer in
+  let length = String.length s in
+  loop length (Buffer.create (length + length lsr 2)) 0 0b1000000000 0

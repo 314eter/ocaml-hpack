@@ -16,7 +16,7 @@ let parse_file file =
     |> Json.filter_assoc
     |> List.flatten
     |> List.map begin fun (name, value) ->
-      {name; value = Json.to_string value; never_index = false}
+      Header.make name (Json.to_string value)
     end
   end
   |> List.flatten
@@ -45,9 +45,9 @@ let decode s =
 let () =
   let headers = parse_dir Sys.argv.(1) in
   let start = time () in
-  for _ = 1 to 99 do encode headers |> ignore done;
+  for _ = 1 to 199 do encode headers |> ignore done;
   let s = encode headers in
   Printf.printf "Encoding time: %f\n" (time () -. start);
   let start = time () in
-  for _ = 1 to 100 do decode s |> ignore done;
+  for _ = 1 to 200 do decode s |> ignore done;
   Printf.printf "Decoding time: %f\n" (time () -. start)

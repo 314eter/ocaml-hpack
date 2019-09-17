@@ -61,14 +61,14 @@ let output_lookup_token oc token_table =
   token_table |> Hashtbl.iter begin fun length names ->
     if StringSet.cardinal names = 1 then
       let name = StringSet.choose names in
-      Printf.fprintf oc   "  | %d when name = %S -> Some Token.%a\n"
+      Printf.fprintf oc   "  | %d when String.equal name %S -> Some Token.%a\n"
         length name output_name name;
     else
       let pos = find_pos names in
       Printf.fprintf oc   "  | %d ->\n" length;
       Printf.fprintf oc   "    begin match name.[%d] with\n" pos;
       names |> StringSet.iter begin fun name ->
-        Printf.fprintf oc "    | %C when name = %S -> Some Token.%a\n"
+        Printf.fprintf oc "    | %C when String.equal name %S -> Some Token.%a\n"
           name.[pos] name output_name name;
       end;
       Printf.fprintf oc   "    | _ -> None\n";
